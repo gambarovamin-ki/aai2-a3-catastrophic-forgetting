@@ -1,5 +1,13 @@
-% Every entry here must be opened and verified against the original
-% before it is cited. Check venue, year, page numbers and DOI.
+% Verification status (checked 2026-11-24 against arXiv, PMLR, Springer,
+% JMLR and the ICLR/NeurIPS proceedings pages):
+%
+%   verified  goodfellow2013, kirkpatrick2017, goldfarb2024, ramasesh2021,
+%             lee2021, hsu2018, vandeven2019, lopezpaz2017, chaudhry2018,
+%             chaudhry2019tiny, mirzadeh2020, pineau2021
+%   NOT YET   farquhar2018  <- open arXiv:1805.09733 and confirm
+%
+% Two entries were corrected at that check: goldfarb2024 was missing its
+% subtitle, and chaudhry2018 had the wrong page range (it is 556--572).
 
 @article{goodfellow2013,
   title   = {An Empirical Investigation of Catastrophic Forgetting in
@@ -26,7 +34,7 @@
 
 @inproceedings{goldfarb2024,
   title     = {The Joint Effect of Task Similarity and Overparameterization
-               on Catastrophic Forgetting},
+               on Catastrophic Forgetting --- An Analytical Model},
   author    = {Goldfarb, Daniel and Evron, Itay and Weinberger, Nir and
                Soudry, Daniel and Hand, Paul},
   booktitle = {International Conference on Learning Representations (ICLR)},
@@ -83,8 +91,10 @@
                Forgetting and Intransigence},
   author    = {Chaudhry, Arslan and Dokania, Puneet K. and Ajanthan, Thalaiyasingam
                and Torr, Philip H. S.},
-  booktitle = {European Conference on Computer Vision (ECCV)},
-  pages     = {532--547},
+  booktitle = {Computer Vision -- ECCV 2018},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {11215},
+  pages     = {556--572},
   year      = {2018},
   doi       = {10.1007/978-3-030-01252-6_33}
 }
