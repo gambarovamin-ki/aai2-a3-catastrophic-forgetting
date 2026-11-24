@@ -1,0 +1,216 @@
+---
+title: "Catastrophic Forgetting and Task Similarity"
+subtitle: "AAI2 Practicals, Topic A3"
+author: "Sehri, Jerin, Locha, Juan, Amin Gambarov"
+date: today
+format:
+  pdf:
+    documentclass: article
+    papersize: a4
+    fontsize: 10pt
+    geometry: margin=2.5cm
+    number-sections: true
+bibliography: references.bib
+---
+
+<!--
+The nine numbered sections below are the ones the course requires, in the
+required order. Do not rename or reorder them.
+
+Target length is 3-4 pages excluding references, so the word budgets in
+each placeholder matter. The note must stand on its own: it is not an
+export of the slides.
+
+Render with:  quarto render report.qmd
+-->
+
+# Problem and motivation
+
+A neural network trained on one task and then on a second loses most of
+what it learned first. A network that reaches 98% on handwritten digits
+can fall to around 20% on those same digits after being trained on a
+different task, and the loss happens within a few hundred gradient steps.
+This failure is called catastrophic forgetting, and it has a simple cause:
+the loss function minimised during the second task contains no term for
+the first, so nothing in the optimisation preserves the earlier solution.
+
+The practical consequence is that a deployed model cannot usually be
+updated with new data. It has to be retrained on everything, which is
+expensive and sometimes impossible when the original data has been deleted
+or cannot be retained. Continual learning is the field that tries to
+remove this constraint.
+
+This note reports an experiment on how forgetting depends on the
+similarity between two sequential tasks, and whether Elastic Weight
+Consolidation protects the first task better than simple experience replay
+as that similarity falls.
+
+# Essential theoretical background
+
+Forgetting follows from how gradient descent works. Training on Task B
+minimises a loss defined only on Task B, so the shared weights are free to
+move to whatever configuration suits B, and the configuration that solved
+A is overwritten. Avoiding this means keeping the network stable enough to
+retain the old solution while leaving it plastic enough to learn the new
+one, a trade-off known as the stability-plasticity dilemma. Every method
+in this study is one position on that trade-off.
+
+<!-- ~150 words still to add: the EWC penalty written out, with the
+     diagonal Fisher defined, and one sentence on what replay does
+     instead. Keep the notation consistent with @sec-design. -->
+
+# Relevant literature
+
+Three findings are well established. @goodfellow2013 measured forgetting
+systematically across activation functions and training algorithms, and
+introduced the permuted-MNIST benchmark this study uses. @kirkpatrick2017
+proposed EWC, which adds a quadratic penalty weighted by the diagonal
+Fisher information, so that parameters important to the old task are
+constrained while the rest stay free; they also showed that a uniform L2
+penalty fails, because protecting every weight equally prevents the
+network from learning the new task at all. Against both, simple experience
+replay remains a strong baseline: @chaudhry2019tiny found plain replay
+outperforming purpose-built continual-learning methods across four
+benchmarks, and @hsu2018 report 95.19% for naive rehearsal against 91.04%
+for EWC on domain-incremental permuted MNIST, with a plain L2 penalty
+reaching 91.08%.
+
+What remains unsettled is the relationship between task similarity and
+forgetting. The intuitive expectation is monotonic: the less alike two
+tasks are, the more is forgotten. Several studies report the opposite
+pattern, with the most forgetting at intermediate similarity.
+@ramasesh2021 observe this on interpolated CIFAR-10 task pairs and trace
+it to the deeper layers of the network; @lee2021 derive it analytically in
+a teacher-student setting and separate feature similarity from readout
+similarity, finding that the two interact; @goldfarb2024 show that the
+shape of the curve depends on how overparameterised the network is,
+non-monotonic for a wide multilayer perceptron and monotonic near the
+interpolation threshold, and note that earlier work reached no consensus
+on the question. This disagreement is the gap the present experiment
+addresses.
+
+# Experimental design {#sec-design}
+
+## Task pairs and the similarity knob
+
+<!-- ~200 words. Permuted MNIST with a centred square of side PS,
+     PS in {0, 8, 12, 16, 20, 24, 28}. State plainly that this varies
+     INPUT similarity only: the label space is fixed at 0-9 and no class
+     changes meaning. Mention the MNIST -> Fashion-MNIST condition if it
+     was run. Report measured similarity (mean pixel correlation) beside
+     PS. Say how the data is obtained (torchvision, downloaded on first
+     run). -->
+
+## Model and training
+
+<!-- ~120 words. MLP 784-256-256-10, ReLU, single shared head, no
+     dropout. Optimiser, learning rate, batch size, epochs per task,
+     identical across all conditions. -->
+
+## Conditions
+
+<!-- ~200 words. Naive, Joint, L2, EWC, Replay. For EWC: the penalty,
+     how the Fisher was computed (exact, per-sample, 1000 images, eval
+     mode, once at the Task A solution), the lambda grid. For replay:
+     the memory-matched buffer of 690 images and the sweep. -->
+
+## Metrics
+
+Let $R[i,j]$ be the test accuracy on task $j$ after training through task
+$i$. With two tasks this is a $2\times2$ matrix, reported in full. From it
+we compute average accuracy and backward transfer as defined by
+@lopezpaz2017, and forgetting and intransigence as defined by
+@chaudhry2018:
+
+$$
+\text{Forgetting} = R[1,1] - R[2,1], \qquad
+\text{BWT} = R[2,1] - R[1,1],
+$$
+
+$$
+\text{FWT} = R[1,2] - \bar{b}_2, \qquad
+\text{Intransigence} = a^{*}_{2} - R[2,2],
+$$
+
+where $\bar{b}_2$ is the accuracy of the freshly initialised network on
+Task B and $a^{*}_{2}$ is the Task B accuracy of the jointly trained
+model. For two tasks forgetting and BWT are the same quantity with
+opposite signs; both are reported so that the numbers are comparable to
+either convention in the literature.
+
+Every forgetting number is reported beside $R[2,2]$, the accuracy on Task
+B. A sufficiently strong penalty can drive forgetting to zero simply by
+preventing the network from learning Task B at all, and intransigence
+measures exactly that cost.
+
+## Protocol and reproducibility
+
+<!-- ~150 words. Seeds (at least five), mean and SD, validation-split
+     tuning with the test set touched once, identical training budget
+     across conditions, the PS=0 sanity check. Repository link, pinned
+     environment, fixed seeds for the permutation and the
+     initialisation, the single script that regenerates every figure,
+     hardware and runtime. Follows the ML Reproducibility Checklist
+     [@pineau2021]. -->
+
+# Results
+
+<!-- ~400 words plus one figure and one table.
+     Figure: forgetting against PS, one line per method, mean +- SD.
+     Table: the headline numbers from metrics_summary.csv.
+     Report the PS=0 sanity check. Describe what the data shows; save
+     interpretation for the next section. -->
+
+```{r}
+#| label: fig-forgetting
+#| fig-cap: "Forgetting against permuted-square size PS, by method. Mean over seeds, error bars one SD."
+#| echo: false
+#| eval: false
+
+# Replace with the real figure once metrics_summary.csv exists.
+```
+
+# Interpretation
+
+<!-- ~350 words. Which hypothesis the curve supports, and why.
+     If replay beat EWC, say so and note that this matches the published
+     pattern (@hsu2018, @chaudhry2019tiny). If the curve is
+     non-monotonic, connect it to @goldfarb2024 and overparameterisation.
+     If it is flat, say that similarity is not the controlling variable
+     here and give the likely reason. Distinguish clearly between what
+     the data shows and what it suggests. -->
+
+# Limitations
+
+<!-- ~300 words, in this order:
+     1. Input similarity only. Labels fixed at 0-9 throughout, so nothing
+        here speaks to label dissimilarity (@lee2021 separate the two as
+        feature and readout similarity).
+     2. One MLP on MNIST. Nothing about CNNs or natural images.
+     3. Two tasks only; published comparisons use ten.
+     4. Domain-incremental scenario only.
+     5. Permuted MNIST is a flattering benchmark (@farquhar2018), and a
+        plain network may show no forgetting at all on two tasks.
+     6. Replay stores raw data; EWC does not. A trade-off, not a flaw. -->
+
+# Conclusion
+
+<!-- ~150 words. The answer to the research question in one sentence,
+     with its number. What the result means for someone choosing between
+     EWC and replay. One sentence on what the obvious next experiment
+     would be. No new claims and no new citations. -->
+
+# Contributions and use of AI {.unnumbered}
+
+<!-- One line per member naming what they implemented and wrote.
+
+     AI use: the course permits AI support for the team project, but the
+     team remains responsible for every claim, reference, equation, line
+     of code, figure, number and interpretation. State here which parts
+     were drafted with AI assistance and confirm that every reference was
+     independently verified against the original publication. -->
+
+# References {.unnumbered}
+
+::: {#refs}
+:::

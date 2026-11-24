@@ -1,0 +1,22 @@
+# Install with:  pip install -r requirements.txt
+# Python 3.11 or newer.
+
+# --- Evaluation layer (metrics.py, aggregate.py, test_metrics.py) ---
+# These two are pinned to the versions this code was actually run and
+# tested against.
+numpy==2.5.3
+pandas==3.0.5
+
+# --- Training layer (data loading, model, the five conditions) ---
+# Minimum versions only. Whoever writes the training code should replace
+# these with exact pins once it runs, so the environment is reproducible.
+# torch and torchvision must be an official matching pair — check
+# https://pytorch.org/get-started/previous-versions/ before pinning.
+torch>=2.5
+torchvision>=0.20
+
+# --- Figures ---
+matplotlib>=3.9
+
+# --- Tests (optional: test_metrics.py also runs standalone) ---
+pytest>=8.0
